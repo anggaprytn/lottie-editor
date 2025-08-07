@@ -7,6 +7,7 @@ import {
   updateDimensions,
   updateFramerate,
   updateShapeColor,
+  deleteLayer,
 } from "../animation";
 import { createStorageValue } from "../storage";
 
@@ -20,6 +21,7 @@ interface AnimationContext {
   updateSelectedShapeColor: (color: RgbaColor) => void;
   updateFramerate: (framerate: number) => void;
   updateDimensions: (width: number, height: number) => void;
+  deleteLayer: (layerIndex: number) => void;
 }
 
 interface AnimationProviderProps {
@@ -36,6 +38,7 @@ const AnimationContext = createContext<AnimationContext>({
   updateSelectedShapeColor: () => null,
   updateFramerate: () => null,
   updateDimensions: () => null,
+  deleteLayer: () => null,
 });
 
 const animationStorage = createStorageValue<Animation>("animationJson", null);
@@ -84,6 +87,12 @@ export const AnimationProvider = ({ children }: AnimationProviderProps) => {
     }
   };
 
+  const handleDeleteLayer = (layerIndex: number) => {
+    if (animationJson) {
+      setAnimationJson(deleteLayer(animationJson, layerIndex));
+    }
+  };
+
   return (
     <AnimationContext.Provider
       value={{
@@ -94,6 +103,7 @@ export const AnimationProvider = ({ children }: AnimationProviderProps) => {
         updateSelectedShapeColor: handleUpdateSelectedShapeColor,
         updateFramerate: handleUpdateFramerate,
         updateDimensions: handleUpdateDimensions,
+        deleteLayer: handleDeleteLayer,
         selectedShapePath,
         setSelectedShapePath,
       }}

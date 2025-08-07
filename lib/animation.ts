@@ -152,3 +152,9 @@ export const updateDimensions = (
 export const updateFramerate = (animation: Animation, framerate: number) => {
   return { ...animation, fr: framerate };
 };
+
+export const deleteLayer = (animation: Animation, layerIndex: number) => {
+  const newLayers = [...animation.layers];
+  newLayers.splice(layerIndex, 1);
+  return { ...animation, layers: newLayers };
+};
