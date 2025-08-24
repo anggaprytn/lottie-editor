@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAnimation } from "@/lib/hooks/useAnimation";
 import {
   Popover,
@@ -16,10 +17,13 @@ import {
   getFramerate,
   getSelectedShape,
   RgbaColor,
+  getColorGroups,
 } from "@/lib/animation";
 import { Loading } from "./ui/Loading";
 
 export const EditSidebar = () => {
+  const [showUnique, setShowUnique] = useState(true);
+  const [showAll, setShowAll] = useState(false);
   const {
     animationJson,
     selectedShapePath,
@@ -27,6 +31,10 @@ export const EditSidebar = () => {
     updateFramerate,
     isAnimationLoading,
     updateDimensions,
+    updateColorGlobally,
+    setHoveredShapePaths,
+    hoveredShapePaths,
+    setIsPlaying,
   } = useAnimation();
 
   const selectedShape =
@@ -38,6 +46,8 @@ export const EditSidebar = () => {
 
   const { width = 0, height = 0 } =
     (animationJson && getDimensions(animationJson)) || {};
+
+  const colorGroups = animationJson ? getColorGroups(animationJson) : [];
 
   const handleColorChange = (color: RgbaColor) => {
     updateSelectedShapeColor(color);
@@ -59,7 +69,7 @@ export const EditSidebar = () => {
   };
 
   return (
-    <div className="border-l bg-muted/40 p-4 min-w-52">
+    <div className="border-l bg-muted/40 p-4 w-52 shrink-0">
       <div className="flex flex-col justify-between h-full">
         {selectedShape && (
           <div className="flex flex-col gap-4">
@@ -67,7 +77,7 @@ export const EditSidebar = () => {
               <h3 className="text-lg font-medium">Edit {selectedShape.name}</h3>
             </div>
             <div className="flex flex-col gap-2">
-              <Popover>
+              <Popover onOpenChange={(open) => open && setIsPlaying(false)}>
                 <PopoverTrigger>
                   <SidebarItem text="Color">
                     <ColorIcon color={selectedShape.colorRgb} />
@@ -119,6 +129,90 @@ export const EditSidebar = () => {
                   className="w-20"
                 />
               </div>
+            </Loading>
+          </div>
+        )}
+
+        {(animationJson || isAnimationLoading) && (
+          <div className="flex flex-col gap-4 mt-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Unique Colors</h3>
+              <button
+                className="text-xs text-muted-foreground hover:underline"
+                onClick={() => setShowUnique((v) => !v)}
+              >
+                {showUnique ? "Hide" : "Show"}
+              </button>
+            </div>
+            <Loading isLoading={isAnimationLoading} className="h-8">
+              {showUnique && (
+                <div className="grid grid-cols-7 gap-2">
+                  {colorGroups.map((group, idx) => (
+                    // Use a stable key so the popover & picker don't remount during drag
+                    <Popover key={`global-color-${idx}`} onOpenChange={(open) => open && setIsPlaying(false)}>
+                      <PopoverTrigger>
+                        <button
+                          className={
+                            group.shapePaths.some((p) => hoveredShapePaths.includes(p))
+                              ? "ring-2 ring-primary rounded-full"
+                              : "rounded-full"
+                          }
+                          onMouseEnter={() => setHoveredShapePaths(group.shapePaths)}
+                          onMouseLeave={() => setHoveredShapePaths([])}
+                        >
+                          <ColorIcon color={group.color} size={18} withBorder />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent>
+                        <RgbaColorPicker
+                          color={group.color}
+                          onChange={(c) => updateColorGlobally(group.color, c)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ))}
+                  {colorGroups.length === 0 && (
+                    <div className="text-sm text-muted-foreground">No colors detected</div>
+                  )}
+                </div>
+              )}
+            </Loading>
+          </div>
+        )}
+
+        {(animationJson || isAnimationLoading) && colorGroups.length > 0 && (
+          <div className="flex flex-col gap-4 mt-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">All Colors</h3>
+              <button
+                className="text-xs text-muted-foreground hover:underline"
+                onClick={() => setShowAll((v) => !v)}
+              >
+                {showAll ? "Hide" : "Show"}
+              </button>
+            </div>
+            <Loading isLoading={isAnimationLoading} className="h-8">
+              {showAll && (
+                <div className="grid grid-cols-7 gap-2 max-h-40 overflow-y-auto pr-1">
+                  {colorGroups.flatMap((group, gIdx) =>
+                    group.shapePaths.map((path, pIdx) => (
+                      <button
+                        key={`all-color-${gIdx}-${pIdx}`}
+                        className={
+                          hoveredShapePaths.includes(path)
+                            ? "ring-2 ring-primary rounded-full"
+                            : "rounded-full"
+                        }
+                        onMouseEnter={() => setHoveredShapePaths([path])}
+                        onMouseLeave={() => setHoveredShapePaths([])}
+                        title={path}
+                      >
+                        <ColorIcon color={group.color} size={14} withBorder />
+                      </button>
+                    )),
+                  )}
+                </div>
+              )}
             </Loading>
           </div>
         )}
