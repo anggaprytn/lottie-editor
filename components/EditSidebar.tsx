@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAnimation } from "@/lib/hooks/useAnimation";
 import {
   Popover,
@@ -25,9 +25,33 @@ import { Loading } from "./ui/Loading";
 const rgbToHex = (n: number) => n.toString(16).padStart(2, "0");
 const rgbaToHex = (c: RgbaColor) => `#${rgbToHex(c.r)}${rgbToHex(c.g)}${rgbToHex(c.b)}`;
 
+// Parse hex string (supports #RGB or #RRGGBB). Returns null if invalid.
+const parseHexToRgb = (raw: string): { r: number; g: number; b: number } | null => {
+  const v = raw.trim().replace(/^#/g, "");
+  if (v.length === 3 && /^[0-9A-Fa-f]{3}$/.test(v)) {
+    const r = parseInt(v[0] + v[0], 16);
+    const g = parseInt(v[1] + v[1], 16);
+    const b = parseInt(v[2] + v[2], 16);
+    return { r, g, b };
+  }
+  if (v.length === 6 && /^[0-9A-Fa-f]{6}$/.test(v)) {
+    const r = parseInt(v.slice(0, 2), 16);
+    const g = parseInt(v.slice(2, 4), 16);
+    const b = parseInt(v.slice(4, 6), 16);
+    return { r, g, b };
+  }
+  return null;
+};
+
 export const EditSidebar = () => {
   const [showUnique, setShowUnique] = useState(true);
   const [showAll, setShowAll] = useState(false);
+  // Local state for editable hex of selected shape
+  const [shapeHex, setShapeHex] = useState<string>("");
+  const [shapeHexFocused, setShapeHexFocused] = useState<boolean>(false);
+  const shapeHexPrevRef = useRef<string>("");
+  // Local overrides for global color inputs (keyed by index)
+  const [groupHex, setGroupHex] = useState<Record<number, string>>({});
   const {
     animationJson,
     selectedShapePath,
@@ -56,6 +80,13 @@ export const EditSidebar = () => {
   const handleColorChange = (color: RgbaColor) => {
     updateSelectedShapeColor(color);
   };
+
+  // Keep selected shape hex in sync with picker/selection when not editing
+  useEffect(() => {
+    if (!shapeHexFocused && selectedShape) {
+      setShapeHex(rgbaToHex(selectedShape.colorRgb));
+    }
+  }, [selectedShape?.colorRgb?.r, selectedShape?.colorRgb?.g, selectedShape?.colorRgb?.b, shapeHexFocused]);
 
   const handleFramerateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFramerate = parseInt(e.target.value, 10);
@@ -95,8 +126,39 @@ export const EditSidebar = () => {
                   <div className="mt-2 flex items-center gap-2">
                     <Label className="text-xs text-muted-foreground">Hex</Label>
                     <Input
-                      readOnly
-                      value={rgbaToHex(selectedShape.colorRgb)}
+                      value={shapeHex}
+                      onFocus={() => {
+                        setShapeHexFocused(true);
+                        const current = rgbaToHex(selectedShape.colorRgb);
+                        shapeHexPrevRef.current = current;
+                        setShapeHex(current);
+                      }}
+                      onChange={(e) => setShapeHex(e.target.value)}
+                      onBlur={() => {
+                        const parsed = parseHexToRgb(shapeHex);
+                        if (!parsed) {
+                          // revert
+                          setShapeHex(shapeHexPrevRef.current || rgbaToHex(selectedShape.colorRgb));
+                        } else {
+                          const next: RgbaColor = {
+                            r: parsed.r,
+                            g: parsed.g,
+                            b: parsed.b,
+                            a: selectedShape.colorRgb.a,
+                          };
+                          updateSelectedShapeColor(next);
+                          setShapeHex(rgbaToHex(next));
+                        }
+                        setShapeHexFocused(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          (e.target as HTMLInputElement).blur();
+                        } else if (e.key === "Escape") {
+                          setShapeHex(shapeHexPrevRef.current || rgbaToHex(selectedShape.colorRgb));
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
                       className="h-8 text-xs w-28"
                     />
                   </div>
@@ -183,8 +245,39 @@ export const EditSidebar = () => {
                         <div className="mt-2 flex items-center gap-2">
                           <Label className="text-xs text-muted-foreground">Hex</Label>
                           <Input
-                            readOnly
-                            value={rgbaToHex(group.color)}
+                            value={groupHex[idx] ?? rgbaToHex(group.color)}
+                            onChange={(e) =>
+                              setGroupHex((prev) => ({ ...prev, [idx]: e.target.value }))
+                            }
+                            onBlur={() => {
+                              const current = groupHex[idx] ?? rgbaToHex(group.color);
+                              const parsed = parseHexToRgb(current);
+                              if (!parsed) {
+                                // revert to original by clearing override
+                                setGroupHex((prev) => {
+                                  const { [idx]: _, ...rest } = prev;
+                                  return rest;
+                                });
+                              } else {
+                                const next: RgbaColor = {
+                                  r: parsed.r,
+                                  g: parsed.g,
+                                  b: parsed.b,
+                                  a: group.color.a,
+                                };
+                                updateColorGlobally(group.color, next);
+                                // clear override to reflect updated color
+                                setGroupHex((prev) => {
+                                  const { [idx]: _, ...rest } = prev;
+                                  return rest;
+                                });
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === "Escape") {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
                             className="h-8 text-xs w-28"
                           />
                         </div>
