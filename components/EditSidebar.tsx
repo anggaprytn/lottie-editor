@@ -23,10 +23,13 @@ import { Loading } from "./ui/Loading";
 
 // Helpers to display hex code for current color selection
 const rgbToHex = (n: number) => n.toString(16).padStart(2, "0");
-const rgbaToHex = (c: RgbaColor) => `#${rgbToHex(c.r)}${rgbToHex(c.g)}${rgbToHex(c.b)}`;
+const rgbaToHex = (c: RgbaColor) =>
+  `#${rgbToHex(c.r)}${rgbToHex(c.g)}${rgbToHex(c.b)}`;
 
 // Parse hex string (supports #RGB or #RRGGBB). Returns null if invalid.
-const parseHexToRgb = (raw: string): { r: number; g: number; b: number } | null => {
+const parseHexToRgb = (
+  raw: string,
+): { r: number; g: number; b: number } | null => {
   const v = raw.trim().replace(/^#/g, "");
   if (v.length === 3 && /^[0-9A-Fa-f]{3}$/.test(v)) {
     const r = parseInt(v[0] + v[0], 16);
@@ -65,7 +68,7 @@ export const EditSidebar = () => {
     setIsPlaying,
   } = useAnimation();
 
-  const selectedShape =
+  const selectedShape: any =
     animationJson &&
     selectedShapePath &&
     getSelectedShape(animationJson, selectedShapePath);
@@ -86,7 +89,12 @@ export const EditSidebar = () => {
     if (!shapeHexFocused && selectedShape) {
       setShapeHex(rgbaToHex(selectedShape.colorRgb));
     }
-  }, [selectedShape?.colorRgb?.r, selectedShape?.colorRgb?.g, selectedShape?.colorRgb?.b, shapeHexFocused]);
+  }, [
+    selectedShape?.colorRgb?.r,
+    selectedShape?.colorRgb?.g,
+    selectedShape?.colorRgb?.b,
+    shapeHexFocused,
+  ]);
 
   const handleFramerateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFramerate = parseInt(e.target.value, 10);
@@ -138,7 +146,10 @@ export const EditSidebar = () => {
                         const parsed = parseHexToRgb(shapeHex);
                         if (!parsed) {
                           // revert
-                          setShapeHex(shapeHexPrevRef.current || rgbaToHex(selectedShape.colorRgb));
+                          setShapeHex(
+                            shapeHexPrevRef.current ||
+                              rgbaToHex(selectedShape.colorRgb),
+                          );
                         } else {
                           const next: RgbaColor = {
                             r: parsed.r,
@@ -155,7 +166,10 @@ export const EditSidebar = () => {
                         if (e.key === "Enter") {
                           (e.target as HTMLInputElement).blur();
                         } else if (e.key === "Escape") {
-                          setShapeHex(shapeHexPrevRef.current || rgbaToHex(selectedShape.colorRgb));
+                          setShapeHex(
+                            shapeHexPrevRef.current ||
+                              rgbaToHex(selectedShape.colorRgb),
+                          );
                           (e.target as HTMLInputElement).blur();
                         }
                       }}
@@ -223,15 +237,22 @@ export const EditSidebar = () => {
                 <div className="grid grid-cols-7 gap-2">
                   {colorGroups.map((group, idx) => (
                     // Use a stable key so the popover & picker don't remount during drag
-                    <Popover key={`global-color-${idx}`} onOpenChange={(open) => open && setIsPlaying(false)}>
+                    <Popover
+                      key={`global-color-${idx}`}
+                      onOpenChange={(open) => open && setIsPlaying(false)}
+                    >
                       <PopoverTrigger>
                         <button
                           className={
-                            group.shapePaths.some((p) => hoveredShapePaths.includes(p))
+                            group.shapePaths.some((p) =>
+                              hoveredShapePaths.includes(p),
+                            )
                               ? "ring-2 ring-primary rounded-full"
                               : "rounded-full"
                           }
-                          onMouseEnter={() => setHoveredShapePaths(group.shapePaths)}
+                          onMouseEnter={() =>
+                            setHoveredShapePaths(group.shapePaths)
+                          }
                           onMouseLeave={() => setHoveredShapePaths([])}
                         >
                           <ColorIcon color={group.color} size={18} withBorder />
@@ -243,14 +264,20 @@ export const EditSidebar = () => {
                           onChange={(c) => updateColorGlobally(group.color, c)}
                         />
                         <div className="mt-2 flex items-center gap-2">
-                          <Label className="text-xs text-muted-foreground">Hex</Label>
+                          <Label className="text-xs text-muted-foreground">
+                            Hex
+                          </Label>
                           <Input
                             value={groupHex[idx] ?? rgbaToHex(group.color)}
                             onChange={(e) =>
-                              setGroupHex((prev) => ({ ...prev, [idx]: e.target.value }))
+                              setGroupHex((prev) => ({
+                                ...prev,
+                                [idx]: e.target.value,
+                              }))
                             }
                             onBlur={() => {
-                              const current = groupHex[idx] ?? rgbaToHex(group.color);
+                              const current =
+                                groupHex[idx] ?? rgbaToHex(group.color);
                               const parsed = parseHexToRgb(current);
                               if (!parsed) {
                                 // revert to original by clearing override
@@ -285,7 +312,9 @@ export const EditSidebar = () => {
                     </Popover>
                   ))}
                   {colorGroups.length === 0 && (
-                    <div className="text-sm text-muted-foreground">No colors detected</div>
+                    <div className="text-sm text-muted-foreground">
+                      No colors detected
+                    </div>
                   )}
                 </div>
               )}
