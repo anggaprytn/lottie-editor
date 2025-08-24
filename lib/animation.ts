@@ -2,6 +2,8 @@ import {
   Animation,
   Layer,
   Shape,
+  Asset,
+  AnimatedProperty,
 } from "@lottie-animation-community/lottie-types";
 import { set, get } from "lodash-es";
 
@@ -59,12 +61,12 @@ const getLayersFromArray = (
     const path = `${basePath}.${i}`;
     const layerInfo: LayerInfo = {
       path,
-      name: (layer as any).nm || "Unnamed Layer",
-      hidden: !!(layer as any).hd,
+      name: layer.nm ?? "Unnamed Layer",
+      hidden: !!layer.hd,
       shapes: [],
       childrenLayers: [],
     };
-    switch ((layer as any).ty) {
+    switch (layer.ty) {
       case LayerTypes.Shape: {
         layerInfo.shapes = getShapesFromLayer(
           (layer as Layer.Shape).shapes,
@@ -73,17 +75,20 @@ const getLayersFromArray = (
         break;
       }
       case LayerTypes.Precomp: {
-        const refId = (layer as any).refId as string | undefined;
-        if (refId && Array.isArray((animation as any).assets)) {
-          const assets = (animation as any).assets as any[];
+        const refId = (layer as Layer.Precomposition).refId as string | undefined;
+        const assets = animation.assets;
+        if (refId && Array.isArray(assets)) {
           const assetIndex = assets.findIndex((a) => a.id === refId);
-          if (assetIndex >= 0 && Array.isArray(assets[assetIndex].layers)) {
-            const childLayers = assets[assetIndex].layers as Layer.Value[];
-            layerInfo.childrenLayers = getLayersFromArray(
-              animation,
-              childLayers,
-              `assets.${assetIndex}.layers`,
-            );
+          if (assetIndex >= 0) {
+            const asset = assets[assetIndex];
+            if (isPrecompAsset(asset)) {
+              const childLayers = asset.layers;
+              layerInfo.childrenLayers = getLayersFromArray(
+                animation,
+                childLayers,
+                `assets.${assetIndex}.layers`,
+              );
+            }
           }
         }
         break;
@@ -98,12 +103,12 @@ const getLayersFromArray = (
 export const getShape = (shape: Shape.Value | undefined, path: string): ShapeInfo => {
   const shapeInfo: ShapeInfo = {
     path: path,
-    name: (shape as any)?.nm || "Unnamed Shape",
+    name: shape?.nm ?? "Unnamed Shape",
     colorRgb: defaultColor,
     children: [],
   };
-  if (!shape || !(shape as any).ty) return shapeInfo;
-  switch ((shape as any).ty) {
+  if (!shape) return shapeInfo;
+  switch (shape.ty) {
     case ShapeTypes.Fill:
       shapeInfo.colorRgb = getColorsFromFillShape(shape as Shape.Fill);
       break;
@@ -127,7 +132,7 @@ const getShapesFromLayer = (
 ): ShapeInfo[] => {
   if (!Array.isArray(shapes)) return [];
   return shapes
-    .map((shape, i) => getShape(shape as any, `${path}.${i}`))
+    .map((shape, i) => getShape(shape, `${path}.${i}`))
     .filter(Boolean);
 };
 
@@ -179,22 +184,23 @@ const colorKey = (c: RgbaColor) => `${c.r},${c.g},${c.b},${c.a}`;
 // Supports both static values and keyframed arrays. Returns the first keyframe's
 // value when animated.
 const readColorFromProperty = (
-  cProp?: { a?: number; k?: unknown },
+  cProp?: AnimatedProperty.Color | AnimatedProperty.MultiDimensional,
 ): number[] | null => {
   if (!cProp) return null;
-  const k = (cProp as any).k;
+  const k = cProp.k;
   if (!Array.isArray(k)) return null;
-  // Static color: k is number[]
+  // Static color: k is number[] (Helpers.ColorRgba)
   if (k.length > 0 && typeof k[0] === "number") {
     return k as number[];
   }
   // Animated: k is keyframes[]
   if (k.length > 0 && typeof k[0] === "object") {
-    const first = k[0] as any;
+    type UnknownKeyframe = { s?: unknown; e?: unknown; k?: unknown };
+    const first = k[0] as UnknownKeyframe;
     const candidate =
-      (Array.isArray(first.s) ? first.s : null) ||
-      (Array.isArray(first.k) ? first.k : null) ||
-      (Array.isArray(first.e) ? first.e : null) ||
+      (Array.isArray(first.s) ? (first.s as number[]) : null) ||
+      (Array.isArray(first.k) ? (first.k as number[]) : null) ||
+      (Array.isArray(first.e) ? (first.e as number[]) : null) ||
       null;
     return candidate;
   }
@@ -210,10 +216,10 @@ const collectColorGroupsFromShapes = (
   for (let i = 0; i < shapes.length; i++) {
     const shape = shapes[i];
     const shapePath = `${basePath}.${i}`;
-    if (!shape || !(shape as any).ty) continue;
-    switch ((shape as any).ty) {
+    if (!shape) continue;
+    switch (shape.ty) {
       case ShapeTypes.Fill: {
-        const rgb = readColorFromProperty((shape as Shape.Fill).c as any);
+        const rgb = readColorFromProperty((shape as Shape.Fill).c);
         if (rgb) {
           const color = toRgbColor(rgb);
           const key = colorKey(color);
@@ -224,7 +230,7 @@ const collectColorGroupsFromShapes = (
         break;
       }
       case ShapeTypes.Stroke: {
-        const rgb = readColorFromProperty((shape as Shape.Stroke).c as any);
+        const rgb = readColorFromProperty((shape as Shape.Stroke).c);
         if (rgb) {
           const color = toRgbColor(rgb);
           const key = colorKey(color);
@@ -248,18 +254,21 @@ export const getColorGroups = (animation: Animation): ColorGroup[] => {
 
   const traverseLayers = (layers: Layer.Value[], basePath: string) => {
     for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i] as any;
+      const layer = layers[i];
       const layerPath = `${basePath}.${i}`;
       if (layer.ty === LayerTypes.Shape) {
         const shapes = (layer as Layer.Shape).shapes || [];
         collectColorGroupsFromShapes(shapes, `${layerPath}.shapes`, groups);
       } else if (layer.ty === LayerTypes.Precomp) {
-        const refId = layer.refId as string | undefined;
-        if (refId && Array.isArray((animation as any).assets)) {
-          const assets = (animation as any).assets as any[];
+        const refId = (layer as Layer.Precomposition).refId as string | undefined;
+        const assets = animation.assets;
+        if (refId && Array.isArray(assets)) {
           const ai = assets.findIndex((a) => a.id === refId);
-          if (ai >= 0 && Array.isArray(assets[ai].layers)) {
-            traverseLayers(assets[ai].layers as Layer.Value[], `assets.${ai}.layers`);
+          if (ai >= 0) {
+            const asset = assets[ai];
+            if (isPrecompAsset(asset)) {
+              traverseLayers(asset.layers, `assets.${ai}.layers`);
+            }
           }
         }
       }
@@ -291,11 +300,11 @@ export const replaceColorGlobally = (
       for (let j = 0; j < list.length; j++) {
         const s = list[j];
         const sPath = `${path}.${j}`;
-        if (!s || !(s as any).ty) continue;
-        if ((s as any).ty === ShapeTypes.Group) {
+        if (!s) continue;
+        if (s.ty === ShapeTypes.Group) {
           const it = (s as Shape.Group).it || [];
           stack.push({ list: it, path: `${sPath}.it` });
-        } else if ((s as any).ty === ShapeTypes.Fill || (s as any).ty === ShapeTypes.Stroke) {
+        } else if (s.ty === ShapeTypes.Fill || s.ty === ShapeTypes.Stroke) {
           const cPath = `${sPath}.c.k`;
           const k = get(newAnim as unknown as object, cPath) as unknown;
           if (!Array.isArray(k)) continue;
@@ -307,8 +316,10 @@ export const replaceColorGlobally = (
             }
           } else if (k.length > 0 && typeof k[0] === "object") {
             // Animated: replace color in each keyframe
-            const newKeyframes = (k as any[]).map((kf) => {
-              const next = { ...kf };
+            const newKeyframes = (k as AnimatedProperty.Keyframe[]).map((kf) => {
+              const next: AnimatedProperty.Keyframe & { k?: unknown } = { ...kf } as AnimatedProperty.Keyframe & {
+                k?: unknown;
+              };
               if (Array.isArray(next.s)) {
                 const sc = toRgbColor(next.s);
                 if (sc.r === from.r && sc.g === from.g && sc.b === from.b && sc.a === from.a) {
@@ -321,8 +332,9 @@ export const replaceColorGlobally = (
                   next.e = fromRgbColor(to);
                 }
               }
+              // Some files may include a non-standard 'k' array per keyframe; handle defensively.
               if (Array.isArray(next.k)) {
-                const kc = toRgbColor(next.k);
+                const kc = toRgbColor(next.k as number[]);
                 if (kc.r === from.r && kc.g === from.g && kc.b === from.b && kc.a === from.a) {
                   next.k = fromRgbColor(to);
                 }
@@ -338,18 +350,21 @@ export const replaceColorGlobally = (
 
   const traverseLayers = (layers: Layer.Value[], basePath: string) => {
     for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i] as any;
+      const layer = layers[i];
       const layerPath = `${basePath}.${i}`;
       if (layer.ty === LayerTypes.Shape) {
         const shapes = (layer as Layer.Shape).shapes || [];
         processShapesAtPath(shapes, `${layerPath}.shapes`);
       } else if (layer.ty === LayerTypes.Precomp) {
-        const refId = layer.refId as string | undefined;
-        if (refId && Array.isArray((newAnim as any).assets)) {
-          const assets = (newAnim as any).assets as any[];
+        const refId = (layer as Layer.Precomposition).refId as string | undefined;
+        const assets = newAnim.assets;
+        if (refId && Array.isArray(assets)) {
           const ai = assets.findIndex((a) => a.id === refId);
-          if (ai >= 0 && Array.isArray(assets[ai].layers)) {
-            traverseLayers(assets[ai].layers as Layer.Value[], `assets.${ai}.layers`);
+          if (ai >= 0) {
+            const asset = assets[ai];
+            if (isPrecompAsset(asset)) {
+              traverseLayers(asset.layers, `assets.${ai}.layers`);
+            }
           }
         }
       }
@@ -401,3 +416,8 @@ export const deleteLayer = (animation: Animation, layerIndex: number) => {
   newLayers.splice(layerIndex, 1);
   return { ...animation, layers: newLayers };
 };
+
+// Type guards
+function isPrecompAsset(asset: Asset.Value): asset is Asset.Precomposition {
+  return (asset as Asset.Precomposition).layers !== undefined;
+}
