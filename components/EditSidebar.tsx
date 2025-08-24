@@ -68,7 +68,7 @@ export const EditSidebar = () => {
     setIsPlaying,
   } = useAnimation();
 
-  const selectedShape: any =
+  const selectedShape =
     animationJson &&
     selectedShapePath &&
     getSelectedShape(animationJson, selectedShapePath);
@@ -89,12 +89,7 @@ export const EditSidebar = () => {
     if (!shapeHexFocused && selectedShape) {
       setShapeHex(rgbaToHex(selectedShape.colorRgb));
     }
-  }, [
-    selectedShape?.colorRgb?.r,
-    selectedShape?.colorRgb?.g,
-    selectedShape?.colorRgb?.b,
-    shapeHexFocused,
-  ]);
+  }, [selectedShape, shapeHexFocused]);
 
   const handleFramerateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFramerate = parseInt(e.target.value, 10);
@@ -282,6 +277,7 @@ export const EditSidebar = () => {
                               if (!parsed) {
                                 // revert to original by clearing override
                                 setGroupHex((prev) => {
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                   const { [idx]: _, ...rest } = prev;
                                   return rest;
                                 });
@@ -295,6 +291,7 @@ export const EditSidebar = () => {
                                 updateColorGlobally(group.color, next);
                                 // clear override to reflect updated color
                                 setGroupHex((prev) => {
+                                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                   const { [idx]: _, ...rest } = prev;
                                   return rest;
                                 });
