@@ -21,6 +21,10 @@ import {
 } from "@/lib/animation";
 import { Loading } from "./ui/Loading";
 
+// Helpers to display hex code for current color selection
+const rgbToHex = (n: number) => n.toString(16).padStart(2, "0");
+const rgbaToHex = (c: RgbaColor) => `#${rgbToHex(c.r)}${rgbToHex(c.g)}${rgbToHex(c.b)}`;
+
 export const EditSidebar = () => {
   const [showUnique, setShowUnique] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -88,6 +92,14 @@ export const EditSidebar = () => {
                     color={selectedShape.colorRgb}
                     onChange={handleColorChange}
                   />
+                  <div className="mt-2 flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">Hex</Label>
+                    <Input
+                      readOnly
+                      value={rgbaToHex(selectedShape.colorRgb)}
+                      className="h-8 text-xs w-28"
+                    />
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
@@ -168,6 +180,14 @@ export const EditSidebar = () => {
                           color={group.color}
                           onChange={(c) => updateColorGlobally(group.color, c)}
                         />
+                        <div className="mt-2 flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground">Hex</Label>
+                          <Input
+                            readOnly
+                            value={rgbaToHex(group.color)}
+                            className="h-8 text-xs w-28"
+                          />
+                        </div>
                       </PopoverContent>
                     </Popover>
                   ))}
