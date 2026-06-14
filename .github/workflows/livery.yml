@@ -21,8 +21,16 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Checkout Livery action
+        uses: actions/checkout@v4
+        with:
+          repository: anggaprytn/livery
+          ref: v0.1.0-rc.2
+          path: .livery-action-source
+          token: ${{ secrets.LIVERY_SOURCE_TOKEN }}
+
       - name: Livery check
-        uses: anggaprytn/livery/packages/action@v0.1.0-rc.2
+        uses: ./.livery-action-source/packages/action
         with:
           brand_id: brand_lottie_editor
           api_url: ${{ secrets.LIVERY_API_URL }}
