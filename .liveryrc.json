@@ -1,0 +1,6 @@
+{
+  "brand_id": "brand_lottie_editor",
+  "runtime_source": "local",
+  "runtime_cache": ".livery/runtime.json",
+  "fail_on": "high"
+}

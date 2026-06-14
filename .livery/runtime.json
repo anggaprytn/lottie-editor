@@ -1,0 +1,74 @@
+{
+  "brand_id": "brand_lottie_editor",
+  "workspace_id": "workspace_demo",
+  "name": "Lottie Editor",
+  "status": "active",
+  "version": "1",
+  "published_at": "2026-06-14T00:00:00.000Z",
+  "positioning": {
+    "category": "Animation tooling",
+    "one_liner": "Inspect, edit, and ship Lottie animations with predictable controls.",
+    "approved_claims": [
+      "Inspect and edit Lottie animations with predictable controls.",
+      "Prepare animation assets for product teams with deterministic checks."
+    ],
+    "forbidden_claims": [
+      "convert any animation perfectly",
+      "guaranteed lossless conversion",
+      "supports every Lottie file",
+      "replace your designer"
+    ]
+  },
+  "language": {
+    "banned_phrases": [
+      "magical",
+      "frictionless AI",
+      "10x your workflow",
+      "one-click magic"
+    ],
+    "preferred_phrases": [
+      "inspect animations",
+      "edit keyframes",
+      "export predictable assets"
+    ],
+    "required_disclaimers": [],
+    "case_sensitive": false
+  },
+  "visual": {
+    "approved_colors": [
+      {
+        "token": "brand.primary.600",
+        "hex": "#7C3AED"
+      }
+    ],
+    "deprecated_colors": [
+      {
+        "hex": "#3B82F6",
+        "reason": "Deprecated blue is outside the active Lottie Editor palette."
+      },
+      {
+        "hex": "#6366F1",
+        "reason": "Deprecated indigo is outside the active Lottie Editor palette."
+      }
+    ],
+    "approved_css_variables": ["--brand-primary"],
+    "deprecated_css_variables": ["--old-primary", "--legacy-accent"],
+    "deprecated_tailwind_classes": [
+      "text-blue-500",
+      "bg-blue-500",
+      "text-indigo-500",
+      "bg-indigo-500"
+    ]
+  },
+  "subjective_guidance": {
+    "voice_traits": [],
+    "approved_examples": [],
+    "rejected_examples": []
+  },
+  "ci_policy": {
+    "fail_on": "high",
+    "allow_subjective_failures": false,
+    "allow_inline_disable": true,
+    "require_disable_reason": true
+  }
+}

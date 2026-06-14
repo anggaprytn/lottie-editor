@@ -1,0 +1,31 @@
+name: Livery Brand Check
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  livery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout Livery action
+        uses: actions/checkout@v4
+        with:
+          repository: anggaprytn/livery
+          ref: v0.1.0-rc.2
+          path: .livery-action-source
+          token: ${{ secrets.LIVERY_SOURCE_TOKEN }}
+
+      - name: Livery check
+        uses: ./.livery-action-source/packages/action
+        with:
+          brand_id: brand_lottie_editor
+          api_url: ${{ secrets.LIVERY_API_URL }}
+          api_key: ${{ secrets.LIVERY_API_KEY }}
+          mode: changed
+          fail_on: high
+          upload: true
